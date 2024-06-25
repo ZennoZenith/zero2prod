@@ -18,6 +18,7 @@ reqwest = "0.12.5"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 config = "0.14.0"
+chrono = "0.4.38"
 
 [dependencies.sqlx]
 version = "0.7"
@@ -29,4 +30,12 @@ features = [
   "uuid",
   "chrono",
   "migrate"
+]
+
+[dependencies.uuid]
+version = "1.9.0"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ]
