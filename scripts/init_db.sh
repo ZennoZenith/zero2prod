@@ -11,7 +11,8 @@ fi
 if ! [ -x "$(command -v sqlx)" ]; then
   echo >&2 "Error: sqlx is not installed."
   echo >&2 "Use: "
-  echo >&2 "cargo install --version=0.5.7 sqlx-cli --no-default-features --features postgres"
+  # echo >&2 "cargo install --version=0.5.7 sqlx-cli --no-default-features --features postgres"
+  echo >&2 "cargo install sqlx-cli --no-default-features --features postgres"
   echo >&2 "to install it."
   exit 1
 fi
@@ -26,19 +27,22 @@ DB_NAME="${POSTGRES_DB:=newsletter}"
 DB_PORT="${POSTGRES_PORT:=5433}"
 DB_HOST="${POSTGRES_HOST:=127.0.0.1}"
 
-# # Create docker volume
-# docker volume create pg_zero2prod
-# # Launch postgres using Docker
-# docker run \
-# --name="pg_zero2prod" \
-# -v pg_zero2prod:/var/lib/postgresql/data \
-# -e POSTGRES_USER=${DB_USER} \
-# -e POSTGRES_PASSWORD=${DB_PASSWORD} \
-# -e POSTGRES_DB=${DB_NAME} \
-# -p "${DB_PORT}":5432 \
-# -d postgres \
-# postgres -N 1000
-# # ^ Increased maximum number of connections for testing purposes
+if [[ $DOCKER == true ]]; then
+  # Create docker volume
+  sudo docker volume create pg_zero2prod
+
+  # Launch postgres using Docker
+  sudo docker run \
+  --name="pg_zero2prod" \
+  -v pg_zero2prod:/var/lib/postgresql/data \
+  -e POSTGRES_USER=${DB_USER} \
+  -e POSTGRES_PASSWORD=${DB_PASSWORD} \
+  -e POSTGRES_DB=${DB_NAME} \
+  -p "${DB_PORT}":5432 \
+  -d postgres \
+  postgres -N 1000
+  # ^ Increased maximum number of connections for testing purposes
+fi
 
 # Keep pinging Postgres until it's ready to accept commands
 export PGPASSWORD="${DB_PASSWORD}"
@@ -51,4 +55,6 @@ done
 export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
 # $env.DATABASE_URL = "postgres://postgres:password@127.0.0.1:5433/newsletter"
 sqlx database create
+sqlx migrate run
 
+>&2 echo "Postgres has been migrated, ready to go!"
