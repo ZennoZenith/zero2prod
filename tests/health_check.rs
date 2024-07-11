@@ -1,10 +1,9 @@
 use once_cell::sync::Lazy;
 use secrecy::ExposeSecret;
-use sqlx::{Connection, Executor, PgConnection, PgPool};
+use sqlx::{Connection, Executor, PgConnection, PgPool, Pool, Postgres};
 use std::net::TcpListener;
-use uuid::Uuid;
 use zero2prod::{
-    configuration::{DatabaseSettings, Settings},
+    configuration::DatabaseSettings,
     startup::run,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -30,7 +29,7 @@ pub struct TestApp {
     pub db_pool: PgPool,
 }
 
-async fn spawn_app() -> TestApp {
+async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     // The first time `initialize` is invoked the code in `TRACING` is executed.
     // All other invocations will instead skip execution.
     Lazy::force(&TRACING);
@@ -40,11 +39,9 @@ async fn spawn_app() -> TestApp {
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
 
-    let mut configuration = Settings::new().expect("Failed to read configuration.");
-    configuration.database.database_name = Uuid::new_v4().to_string();
-    let connection_pool = configure_database(&configuration.database).await;
-
     let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
+
+    #[allow(clippy::let_underscore_future)]
     let _ = tokio::spawn(server);
     TestApp {
         address,
@@ -74,9 +71,9 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     connection_pool
 }
 
-#[tokio::test]
-async fn health_check_works() {
-    let app = spawn_app().await;
+#[sqlx::test]
+async fn health_check_works(pool: Pool<Postgres>) {
+    let app = spawn_app(pool).await;
     let client = reqwest::Client::new();
 
     let response = client
@@ -89,9 +86,9 @@ async fn health_check_works() {
     assert_eq!(Some(0), response.content_length());
 }
 
-#[tokio::test]
-async fn suscribe_returns_a_200_for_valid_form_data() {
-    let app = spawn_app().await;
+#[sqlx::test]
+async fn suscribe_returns_a_200_for_valid_form_data(pool: Pool<Postgres>) {
+    let app = spawn_app(pool).await;
     let client = reqwest::Client::new();
 
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -114,9 +111,9 @@ async fn suscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(saved.name, "le guin");
 }
 
-#[tokio::test]
-async fn suscribe_returns_a_400_when_data_is_missing() {
-    let app = spawn_app().await;
+#[sqlx::test]
+async fn suscribe_returns_a_400_when_data_is_missing(pool: Pool<Postgres>) {
+    let app = spawn_app(pool).await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
