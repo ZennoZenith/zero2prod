@@ -140,7 +140,7 @@ async fn suscribe_returns_a_400_when_data_is_missing(pool: Pool<Postgres>) {
 }
 
 #[sqlx::test]
-async fn subscribe_returns_a_200_when_fields_are_present_but_empty(pool: Pool<Postgres>) {
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid(pool: Pool<Postgres>) {
     // Arrange
     let app = spawn_app(pool).await;
     let client = reqwest::Client::new();
