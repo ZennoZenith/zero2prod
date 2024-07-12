@@ -15,4 +15,4 @@ database_name = "newsletter"
 base_url = "https://app.mailgun.com"
 sender_email = "something@gmail.com"
 authorization_token = "my-secret-token"
-timeout_sec = 10
+timeout_milliseconds = 10000
