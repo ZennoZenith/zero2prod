@@ -2,7 +2,8 @@ use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool, Pool, Postgres};
 use std::net::TcpListener;
 use zero2prod::{
-    configuration::DatabaseSettings,
+    configuration::{DatabaseSettings, Settings},
+    email_client::EmailClient,
     startup::run,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -33,12 +34,20 @@ async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     // All other invocations will instead skip execution.
     Lazy::force(&TRACING);
 
+    let configuration = Settings::new().expect("Failed to read configuration.");
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
 
-    let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
+    let sender_email = configuration
+        .email_client
+        .sender()
+        .expect("Invalid sender email address.");
+    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email);
+
+    let server =
+        run(listener, connection_pool.clone(), email_client).expect("Failed to bind address");
 
     #[allow(clippy::let_underscore_future)]
     let _ = tokio::spawn(server);

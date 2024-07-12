@@ -10,3 +10,7 @@ port = 5433
 username = "postgres"
 password = "password"
 database_name = "newsletter"
+
+[email_client]
+base_url = "https://app.mailgun.com"
+sender_email = "something@gmail.com"

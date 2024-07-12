@@ -1,3 +1,4 @@
+use crate::domain::SubscriberEmail;
 use config::{Config, File};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
@@ -9,6 +10,7 @@ use sqlx::ConnectOptions;
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub email_client: EmailClientSettings,
 }
 
 #[derive(Deserialize)]
@@ -101,5 +103,17 @@ impl TryFrom<String> for Environment {
                 other
             )),
         }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+}
+
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.sender_email.clone())
     }
 }

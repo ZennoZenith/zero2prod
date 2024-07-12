@@ -1,6 +1,6 @@
 use email_address::EmailAddress;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
