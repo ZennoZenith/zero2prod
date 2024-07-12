@@ -144,30 +144,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_email_fires_a_request_to_base_url() {
-        // Arrange
-        let mock_server = MockServer::start().await;
-        let email_client = email_client(mock_server.uri());
-
-        Mock::given(header_exists("authorization"))
-            .and(header("Content-Type", "application/x-www-form-urlencoded"))
-            .and(path("/email"))
-            .and(method("POST"))
-            .and(SendEmailFormMatcher)
-            .respond_with(ResponseTemplate::new(200))
-            .expect(1)
-            .mount(&mock_server)
-            .await;
-
-        // Act
-        let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
-            .await;
-        // Assert
-        assert_ok!(outcome);
-    }
-
-    #[tokio::test]
     async fn send_email_fails_if_the_server_returns_500() {
         // Arrange
         let mock_server = MockServer::start().await;
@@ -211,8 +187,8 @@ mod tests {
     async fn send_email_sends_the_expected_request() {
         let mock_server = MockServer::start().await;
         let email_client = email_client(mock_server.uri());
-        Mock::given(header_exists("X-Postmark-Server-Token"))
-            .and(header("Content-Type", "application/json"))
+        Mock::given(header_exists("authorization"))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
             .and(path("/email"))
             .and(method("POST"))
             .and(SendEmailFormMatcher)
@@ -221,9 +197,10 @@ mod tests {
             .mount(&mock_server)
             .await;
         // Act
-        let _ = email_client
+        let outcome = email_client
             .send_email(email(), &subject(), &content(), &content())
             .await;
         // Assert
+        assert_ok!(outcome);
     }
 }
