@@ -4,3 +4,6 @@ host = "0.0.0.0"
 [database]
 # TODO: Change host to postgres docker container
 host = "0.0.0.0"
+# TODO: Review how to implement for true 
+# Maybe set to true if database is hosted somewhere else
+require_ssl = false
