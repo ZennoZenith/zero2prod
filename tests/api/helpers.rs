@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use sqlx::{PgPool, Pool, Postgres};
+use wiremock::MockServer;
 use zero2prod::startup::Application;
 use zero2prod::{
     configuration::Settings,
@@ -25,6 +26,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
 }
 
 impl TestApp {
@@ -44,10 +46,13 @@ pub async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     // All other invocations will instead skip execution.
     Lazy::force(&TRACING);
 
+    let email_server = MockServer::start().await;
+
     let mut configuration = Settings::new().expect("Failed to read configuration.");
     configuration.application.port = 0;
+    configuration.email_client.base_url = email_server.uri();
 
-    let application = Application::build(&configuration)
+    let application = Application::build_test(&configuration, connection_pool.clone())
         .await
         .expect("Failed to build application.");
     let address = format!("http://127.0.0.1:{}", application.port());
@@ -58,6 +63,7 @@ pub async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     TestApp {
         address,
         db_pool: connection_pool,
+        email_server,
     }
 }
 

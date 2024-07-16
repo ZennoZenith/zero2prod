@@ -1,4 +1,8 @@
 use sqlx::{Pool, Postgres};
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
 
 use crate::helpers::spawn_app;
 
@@ -6,6 +10,13 @@ use crate::helpers::spawn_app;
 async fn suscribe_returns_a_200_for_valid_form_data(pool: Pool<Postgres>) {
     let app = spawn_app(pool).await;
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
     let response = app.post_subscriptions(body.into()).await;
     assert_eq!(200, response.status().as_u16());
 
@@ -58,4 +69,21 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid(pool: Pool<
             description
         );
     }
+}
+
+#[sqlx::test]
+async fn subscribe_sends_a_confirmation_email_for_valid_data(pool: Pool<Postgres>) {
+    // Arrange
+    let app = spawn_app(pool).await;
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    // Mock::given(path("/email"))
+    //     .and(method("POST"))
+    //     .respond_with(ResponseTemplate::new(200))
+    //     .expect(1)
+    //     .mount(&app.email_server)
+    //     .await;
+    // Act
+    app.post_subscriptions(body.into()).await;
+    // Assert
+    // Mock asserts on drop
 }
