@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use once_cell::sync::Lazy;
 use sqlx::{PgPool, Pool, Postgres};
 use wiremock::MockServer;
@@ -30,6 +32,11 @@ pub struct TestApp {
     pub port: u16,
 }
 
+pub struct ConfirmationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
+}
+
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
@@ -39,6 +46,28 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute request.")
+    }
+
+    pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+        let body =
+            serde_html_form::from_bytes::<HashMap<String, String>>(&email_request.body).unwrap();
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 1);
+            let raw_link = links[0].as_str().to_owned();
+            let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
+            // Let's make sure we don't call random APIs on the web
+            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+            confirmation_link.set_port(Some(self.port)).unwrap();
+            confirmation_link
+        };
+
+        let html = get_link(body["HtmlBody"].as_str());
+        let plain_text = get_link(body["TextBody"].as_str());
+        ConfirmationLinks { html, plain_text }
     }
 }
 
@@ -69,24 +98,3 @@ pub async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
         email_server,
     }
 }
-
-// async fn configure_database(config: &DatabaseSettings) -> PgPool {
-//     // Create database
-//     let mut connection = PgConnection::connect_with(&config.without_db())
-//         .await
-//         .expect("Failed to connect to Postgres");
-
-//     connection
-//         .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
-//         .await
-//         .expect("Failed to create database.");
-//     // Migrate database
-//     let connection_pool = PgPool::connect_with(config.with_db())
-//         .await
-//         .expect("Failed to connect to Postgres.");
-//     sqlx::migrate!("./migrations")
-//         .run(&connection_pool)
-//         .await
-//         .expect("Failed to migrate the database");
-//     connection_pool
-// }
