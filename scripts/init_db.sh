@@ -34,6 +34,7 @@ if [[ $DOCKER == true ]]; then
   # Launch postgres using Docker
   sudo docker run \
   --name="pg_zero2prod" \
+  --restart=unless-stopped \
   -v pg_zero2prod:/var/lib/postgresql/data \
   -e POSTGRES_USER=${DB_USER} \
   -e POSTGRES_PASSWORD=${DB_PASSWORD} \
