@@ -51,18 +51,12 @@ impl EmailClient {
 
     pub async fn send_email(
         &self,
-        recipient: SubscriberEmail,
+        recipient: &SubscriberEmail,
         subject: &str,
         html_content: &str,
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/email", self.base_url);
-        // let request_body = multipart::Form::new()
-        //     .text("from", self.sender.as_ref().to_owned())
-        //     .text("to", recipient.as_ref().to_owned())
-        //     .text("subject", subject.to_owned())
-        //     .text("text", html_content.to_owned());
-        // .text("text", text_content.to_owned());
 
         let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
@@ -76,9 +70,7 @@ impl EmailClient {
             .http_client
             .post(url)
             .basic_auth("api", Some(self.authorization_token.expose_secret()))
-            // .json(&request_body);
             .form(&request_body.params())
-            // .multipart(request_body)
             .send()
             .await?
             .error_for_status()?;
@@ -156,7 +148,7 @@ mod tests {
             .await;
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
         // Assert
         assert_err!(outcome);
@@ -177,7 +169,7 @@ mod tests {
             .await;
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
         // Assert
         assert_err!(outcome);
@@ -198,7 +190,7 @@ mod tests {
             .await;
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
         // Assert
         assert_ok!(outcome);
