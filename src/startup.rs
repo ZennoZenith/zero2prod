@@ -13,10 +13,16 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build_with_pool(
+    pub async fn build(
         configuration: &Settings,
-        connection_pool: Pool<Postgres>,
+        connection_pool: Option<Pool<Postgres>>,
     ) -> Result<Self, std::io::Error> {
+        let connection_pool = connection_pool.unwrap_or_else(|| {
+            PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(2))
+                .connect_lazy_with(configuration.database.with_db())
+        });
+
         let sender_email = configuration
             .email_client
             .sender()
@@ -43,13 +49,6 @@ impl Application {
             configuration.application.base_url.clone(),
         )?;
         Ok(Self { port, server })
-    }
-
-    pub async fn build(configuration: &Settings) -> Result<Self, std::io::Error> {
-        let connection_pool = PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(2))
-            .connect_lazy_with(configuration.database.with_db());
-        Application::build_with_pool(configuration, connection_pool).await
     }
 
     pub fn port(&self) -> u16 {
