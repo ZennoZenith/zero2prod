@@ -94,7 +94,7 @@ pub async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     configuration.application.port = 0;
     configuration.email_client.base_url = email_server.uri();
 
-    let application = Application::build_with_pool(&configuration, connection_pool.clone())
+    let application = Application::build(&configuration, Some(connection_pool.clone()))
         .await
         .expect("Failed to build application.");
     let application_port = application.port();
