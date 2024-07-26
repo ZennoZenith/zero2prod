@@ -34,6 +34,7 @@ pub struct TestApp {
     pub email_server: MockServer,
     pub port: u16,
     pub test_user: TestUser,
+    pub api_client: reqwest::Client,
 }
 
 pub struct ConfirmationLinks {
@@ -43,7 +44,7 @@ pub struct ConfirmationLinks {
 
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client
             .post(&format!("{}/subscriptions", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
@@ -75,7 +76,7 @@ impl TestApp {
     }
 
     pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client
             .post(&format!("{}/newsletters", &self.address))
             .basic_auth(&self.test_user.username, Some(&self.test_user.password))
             .json(&body)
@@ -88,10 +89,7 @@ impl TestApp {
     where
         Body: Serialize,
     {
-        reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap()
+        self.api_client
             .post(&format!("{}/login", &self.address))
             // This `reqwest` method makes sure that the body is URL-encoded
             // and the `Content-Type` header is set accordingly.
@@ -102,7 +100,7 @@ impl TestApp {
     }
 
     pub async fn get_login_html(&self) -> String {
-        reqwest::Client::new()
+        self.api_client
             .get(&format!("{}/login", &self.address))
             .send()
             .await
@@ -135,12 +133,19 @@ pub async fn spawn_app(connection_pool: Pool<Postgres>) -> TestApp {
     let test_user = TestUser::generate();
     test_user.store(&connection_pool).await;
 
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
     TestApp {
         address,
         port: application_port,
         db_pool: connection_pool,
         email_server,
         test_user,
+        api_client: client,
     }
 }
 
