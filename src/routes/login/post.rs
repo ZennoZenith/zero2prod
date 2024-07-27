@@ -1,4 +1,3 @@
-use actix_session::Session;
 use actix_web::{
     error::InternalError,
     http::{header::LOCATION, StatusCode},
