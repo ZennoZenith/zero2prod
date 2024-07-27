@@ -42,6 +42,7 @@ sha2 = "0.10"
 hmac = { version = "0.12", features = ["std"] }
 hex = "0.4"
 actix-web-flash-messages = { version = "0.4", features = ["cookies"] }
+actix-session = { version = "0.9", features = ["redis-rs-tls-session"] }
 
 [dependencies.sqlx]
 version = "0.7"
